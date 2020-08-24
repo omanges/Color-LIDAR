@@ -1,0 +1,100 @@
+<html>
+  <head>
+    <style>
+      body,
+      html {
+        border: 0;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100vh;
+        width: 100vw;
+      }
+    </style>
+    <script src="https://unpkg.com/three/build/three.min.js"></script>
+    <script src="https://unpkg.com/@here/harp.gl/dist/harp.js"></script>
+  </head>
+  <body>
+    <canvas id="map"></canvas>
+    <script type="text/javascript">
+      const map = new harp.MapView({
+        canvas: document.getElementById("map"),
+        theme:
+          "https://unpkg.com/@here/harp-map-theme@latest/resources/berlin_tilezen_night_reduced.json",
+        zoomLevel: 19,
+      });
+      const controls = new harp.MapControls(map);
+      const omvDataSource = new harp.OmvDataSource({
+        baseUrl: "https://vector.hereapi.com/v2/vectortiles/base/mc",
+        authenticationCode: "[YOUR-API-KEY]",
+      });
+      map.addDataSource(omvDataSource);
+
+      const addDataToMap = (json) => {
+        if (json.length === 0) {
+          return;
+        }
+
+        var geometry = new THREE.Geometry();
+        var colors = [];
+
+        let geoAnchor;
+        let worldAnchor;
+        for (var index = 0; index < json.length; index++) {
+          const data = json[index];
+          // Data is in longitude, latitude, altitude format
+          const geoPoint = new harp.GeoCoordinates(data[1], data[0], data[2]-75);
+          if (geoAnchor === undefined) {
+            // Choose the first point as anchor
+            geoAnchor = geoPoint;
+            worldAnchor = map.projection.projectPoint(geoPoint);
+          }
+          const worldPoint = map.projection.projectPoint(
+            geoPoint,
+            new THREE.Vector3()
+          );
+          // Make all points relative to the first point.
+          worldPoint.sub(worldAnchor);
+          geometry.vertices.push(worldPoint);
+
+          // data has colors between 0-255 but three.js expects 0-1 ranges
+          colors.push(
+            new THREE.Color(data[3] / 255, data[4] / 255, data[5] / 255)
+          );
+        }
+
+        geometry.colors = colors;
+        geometry.colorsNeedUpdate = true;
+        var material = new THREE.PointsMaterial({
+          size: 10,
+          vertexColors: THREE.VertexColors,
+        });
+
+        const particleSystem = new THREE.Points(geometry, material);
+        particleSystem.renderOrder = 1000;
+
+        particleSystem.anchor = geoAnchor;
+        map.mapAnchors.add(particleSystem);
+
+        // Center the point cloud
+        map.lookAt({ target: new harp.GeoCoordinates(37.73728858121953, -122.41991400718689)});
+        map.update();
+      };
+
+      fetch("./TEST_LIDAR.json")
+        .then((data) => data.json())
+        .then((json) => {
+          addDataToMap(json);
+        });
+
+    const options = { target: new harp.GeoCoordinates(37.73728858121953, -122.41991400718689), tilt: 60, zoomLevel: 19, heading: 0, globe: true };
+    map.addEventListener(harp.MapViewEventNames.AfterRender, () => {
+        options.heading = (options.heading + 0.1) % 360;
+        options.zoomLevel = map.zoomLevel;
+        map.lookAt(options);
+        map.update();
+    });
+    </script>
+  </body>
+</html>
