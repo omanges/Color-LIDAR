@@ -2,15 +2,6 @@
 import rasterio as rio
 from affine import Affine
 
-with rio.open("PATH_TIF_FILE") as imagery_data:
-    T0 = imagery_data.transform
-    T1 = T0 * Affine.translation(0.5, 0.5)
-    pixel2coord = lambda c, r: (c, r) * T1
-    width = imagery_data.width
-    height = imagery_data.height
-    generate_colour_data(width, height, imagery_data, pixel2coord)
-
-
 colour_data = []
 
 
@@ -27,6 +18,15 @@ def generate_colour_data(width, height, imagiry_data, pixel2coord):
                     imagiry_data.read([4])[0][i - 1][j - 1],
                 ]
             )
+
+
+with rio.open("PATH_TIF_FILE") as imagery_data:
+    T0 = imagery_data.transform
+    T1 = T0 * Affine.translation(0.5, 0.5)
+    pixel2coord = lambda c, r: (c, r) * T1
+    width = imagery_data.width
+    height = imagery_data.height
+    generate_colour_data(width, height, imagery_data, pixel2coord)
 
 
 import xyzspaces as xyz
