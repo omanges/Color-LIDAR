@@ -133,9 +133,9 @@ manager = Manager()
 final_data = manager.list()
 
 
-def gen_feature_color(f, space_color, func):
+def gen_feature_color(features, space_color, func):
     try:
-        for d in f:
+        for d in features:
             fl = []
             for f in space_color.spatial_search(lon=d[0], lat=d[1], radius=3):
                 fl.append(
